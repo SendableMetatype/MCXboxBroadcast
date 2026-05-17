@@ -25,7 +25,6 @@ public class ExpandedSessionInfo extends SessionInfo {
         this.sessionId = UUID.randomUUID().toString();
         this.netherNetId = BigInteger.valueOf(Math.abs(RANDOM.nextLong()));
         this.deviceId = UUID.randomUUID().toString();
-        this.pmsgId = null;
 
         setHostName(sessionInfo.getHostName().isEmpty() ? "MCXboxBroadcast" : sessionInfo.getHostName());
         setWorldName(sessionInfo.getWorldName().isEmpty() ? getHostName() : sessionInfo.getWorldName());
@@ -78,6 +77,10 @@ public class ExpandedSessionInfo extends SessionInfo {
 
     public BigInteger getNetherNetId() {
         return netherNetId;
+    }
+
+    public void setNetherNetId(BigInteger netherNetId) {
+        this.netherNetId = netherNetId;
     }
 
     public String getDeviceId() {

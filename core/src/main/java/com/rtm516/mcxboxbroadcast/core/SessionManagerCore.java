@@ -12,19 +12,10 @@ import com.rtm516.mcxboxbroadcast.core.models.session.SessionRef;
 import com.rtm516.mcxboxbroadcast.core.models.session.SocialSummaryResponse;
 import com.rtm516.mcxboxbroadcast.core.notifications.NotificationManager;
 import com.rtm516.mcxboxbroadcast.core.storage.StorageManager;
-import com.rtm516.mcxboxbroadcast.core.nethernet.BroadcasterChannelInitializer;
-import dev.kastle.netty.channel.nethernet.NetherNetChannelFactory;
-import dev.kastle.netty.channel.nethernet.signaling.NetherNetXboxRpcSignaling;
-import dev.kastle.webrtc.PeerConnectionFactory;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import net.raphimc.minecraftauth.bedrock.BedrockAuthManager;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -53,11 +44,6 @@ public abstract class SessionManagerCore {
     protected String lastSessionResponse;
 
     protected boolean initialized = false;
-
-    private Channel netherNetChannel;
-    private EventLoopGroup bossGroup;
-    private EventLoopGroup workerGroup;
-    private NetherNetXboxRpcSignaling signaling;
 
     /**
      * Create an instance of SessionManager
@@ -247,11 +233,6 @@ public abstract class SessionManagerCore {
                 throw new SessionCreationException("Unable to get connectionId for session: " + e.getMessage());
             }
 
-            setupNetherNet();
-
-            if (this.netherNetChannel == null || !this.netherNetChannel.isOpen()) {
-                throw new SessionCreationException("Unable to start NetherNet channel");
-            }
         }
 
         // Set the showcase image to the current screenshot
@@ -371,14 +352,10 @@ public abstract class SessionManagerCore {
      */
     protected void checkConnection() {
         boolean rtaIsOpen = this.rtaWebsocket != null && this.rtaWebsocket.isOpen();
-        boolean rtcIsOpen = this.netherNetChannel != null && this.netherNetChannel.isOpen();
 
-        // Check if the connection is Lost
-        if (!rtaIsOpen || !rtcIsOpen) {
+        if (!rtaIsOpen) {
             try {
                 logger.warn("Connection to websocket lost, re-creating session...");
-                logger.debug("WebSocket status: RTA Open: " + rtaIsOpen + " RTC Open: " + rtcIsOpen);
-
                 createSession();
                 logger.info("WebSocket session reconnected");
             } catch (SessionCreationException | SessionUpdateException e) {
@@ -421,31 +398,6 @@ public abstract class SessionManagerCore {
         rtaWebsocket.connect();
     }
 
-    protected void setupNetherNet() {
-        shutdownNetherNet();
-
-        long netherNetId = this.sessionInfo.getNetherNetId().longValue();
-
-        this.signaling = new NetherNetXboxRpcSignaling(netherNetId, getMCTokenHeader());
-        this.sessionInfo.setPmsgId(getAuthManager().getMinecraftSession().getCached().getParsedToken().getPayload().reqString("pmid"));
-
-        this.bossGroup = new NioEventLoopGroup(1);
-        this.workerGroup = new NioEventLoopGroup();
-
-        try {
-            ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
-                .channelFactory(NetherNetChannelFactory.server(new PeerConnectionFactory(), signaling))
-                .childHandler(new BroadcasterChannelInitializer(sessionInfo, this, logger));
-
-            this.netherNetChannel = b.bind(new InetSocketAddress(0)).sync().channel();
-
-            logger.info("NetherNet Broadcaster started on ID: " + netherNetId);
-        } catch (Exception e) {
-            logger.error("Failed to start NetherNet", e);
-        }
-    }
-
     /**
      * Stop the current session and close the websocket
      */
@@ -453,29 +405,8 @@ public abstract class SessionManagerCore {
         if (rtaWebsocket != null) {
             rtaWebsocket.close();
         }
-        
-        shutdownNetherNet();
-        
-        this.initialized = false;
-    }
 
-    private void shutdownNetherNet() {
-        if (netherNetChannel != null) {
-            netherNetChannel.close();
-            netherNetChannel = null;
-        }
-        if (signaling != null) {
-            signaling.close();
-            signaling = null;
-        }
-        if (bossGroup != null) {
-            bossGroup.shutdownGracefully();
-            bossGroup = null;
-        }
-        if (workerGroup != null) {
-            workerGroup.shutdownGracefully();
-            workerGroup = null;
-        }
+        this.initialized = false;
     }
 
     /**

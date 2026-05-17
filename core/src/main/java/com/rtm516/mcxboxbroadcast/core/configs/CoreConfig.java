@@ -38,20 +38,6 @@ public interface CoreConfig {
     @ConfigSerializable
     interface SessionConfig {
         @Comment("""
-            The IP address to broadcast, you likely want to change this to
-            your servers public IP""")
-        @ExcludePlatform(platforms = {"Standalone"})
-        @DefaultString("auto")
-        String remoteAddress();
-
-        @Comment("""
-            The port to broadcast, this should be left as auto unless your
-            manipulating the port using network rules or reverse proxies""")
-        @ExcludePlatform(platforms = {"Standalone"})
-        @DefaultString("auto")
-        String remotePort();
-
-        @Comment("""
             The amount of time in seconds to update session information
             Warning: This can be no lower than 20 due to Xbox rate limits""")
         @DefaultNumeric(30)

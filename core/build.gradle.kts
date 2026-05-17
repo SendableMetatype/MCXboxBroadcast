@@ -18,17 +18,6 @@ dependencies {
     api(libs.methanol)
     api(libs.minecraftauth)
     api(libs.bundles.protocol)
-    api(libs.netty.transport.nethernet)
-
-    api(libs.webrtc)
-    nativePlatforms.forEach { platform ->
-        runtimeOnly(libs.webrtc) {
-            artifact {
-                classifier = platform
-            }
-        }
-    }
-
     api(libs.sqlite)
 
     annotationProcessor(libs.configurate.`interface`.ap)

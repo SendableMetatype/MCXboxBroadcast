@@ -29,10 +29,6 @@ tasks.withType<ShadowJar> {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
     
-    // Suppress illegal access warnings for webrtc natives
-    manifest {
-        attributes["Enable-Native-Access"] = "ALL-UNNAMED"
-    }
 }
 
 nameJar("MCXboxBroadcastStandalone")

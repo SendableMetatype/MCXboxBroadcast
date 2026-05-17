@@ -24,11 +24,6 @@ import org.geysermc.geyser.api.extension.Extension;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.concurrent.TimeUnit;
 
 public class MCXboxBroadcastExtension implements Extension {
@@ -151,6 +146,20 @@ public class MCXboxBroadcastExtension implements Extension {
             return;
         }
 
+        // Start Nethernet via Geyser's API
+        var nethernet = this.geyserApi().nethernetManager();
+        if (nethernet == null) {
+            logger.error("Nethernet transport is not available. Extension will not start.");
+            this.disable();
+            return;
+        }
+        if (!nethernet.start()) {
+            logger.error("Failed to start Nethernet server. Extension will not start.");
+            this.disable();
+            return;
+        }
+        logger.info("Nethernet connection ID: " + nethernet.getConnectionId());
+
         // TODO Support multiple notification types
         notificationManager = new SlackNotificationManager(logger, config.notifications());
 
@@ -159,34 +168,6 @@ public class MCXboxBroadcastExtension implements Extension {
 
         // Pull onto another thread so we don't hang the main thread
         sessionManager.scheduledThread().execute(() -> {
-            // Get the ip to broadcast
-            String ip = config.session().remoteAddress();
-            if (ip.equals("auto")) {
-                ip = this.geyserApi().bedrockListener().address();
-
-                try {
-                    InetAddress address = InetAddress.getByName(ip);
-
-                    // Get the public IP if the config ip is a non-public address
-                    if (address.isSiteLocalAddress() || address.isAnyLocalAddress() || address.isLoopbackAddress()) {
-                        HttpRequest ipRequest = HttpRequest.newBuilder()
-                            .uri(URI.create("https://ipv4.icanhazip.com"))
-                            .GET()
-                            .build();
-
-                        ip = HttpClient.newHttpClient().send(ipRequest, HttpResponse.BodyHandlers.ofString()).body().trim();
-                    }
-                } catch (IOException | InterruptedException e) {
-                    // Silently ignore
-                }
-            }
-
-            // Get the port to broadcast
-            int port = this.geyserApi().bedrockListener().port();
-            if (!config.session().remotePort().equals("auto")) {
-                port = Integer.parseInt(config.session().remotePort());
-            }
-
             // Create the session information based on the Geyser config
             sessionInfo = new SessionInfo();
             sessionInfo.setHostName(this.geyserApi().bedrockListener().secondaryMotd());
@@ -198,9 +179,6 @@ public class MCXboxBroadcastExtension implements Extension {
             if (sessionInfo.getHostName().isEmpty()) {
                 sessionInfo.setHostName(sessionManager.getGamertag());
             }
-
-            sessionInfo.setIp(ip);
-            sessionInfo.setPort(port);
 
             createSession();
         });
@@ -238,12 +216,16 @@ public class MCXboxBroadcastExtension implements Extension {
 
 
     private void createSession() {
+        // Use Geyser's shared Nethernet info
+        var nethernet = this.geyserApi().nethernetManager();
+        String connectionId = nethernet != null ? nethernet.getConnectionId() : null;
+        String pmsgId = nethernet != null ? nethernet.getPmsgId() : null;
+
         // Create the Xbox session
         sessionManager.restartCallback(this::restart);
         try {
-            boolean initialized = sessionManager.init(sessionInfo, config.friendSync());
+            boolean initialized = sessionManager.init(sessionInfo, config.friendSync(), connectionId, pmsgId);
             if (!initialized) {
-                // We assume an error has already been logged
                 this.setEnabled(false);
                 return;
             }

@@ -80,8 +80,20 @@ public class SessionManager extends SessionManagerCore {
      * @throws SessionUpdateException   If the session data couldn't be set due to some issue
      */
     public boolean init(SessionInfo sessionInfo, CoreConfig.FriendSyncConfig friendSyncConfig) throws SessionCreationException, SessionUpdateException {
+        return init(sessionInfo, friendSyncConfig, null, null);
+    }
+
+    public boolean init(SessionInfo sessionInfo, CoreConfig.FriendSyncConfig friendSyncConfig, String netherNetId, String pmsgId) throws SessionCreationException, SessionUpdateException {
         // Set the internal session information based on the session info
         this.sessionInfo = new ExpandedSessionInfo("", "", sessionInfo);
+
+        // Use the provided Nethernet info if available (from Geyser's NethernetManager)
+        if (netherNetId != null) {
+            this.sessionInfo.setNetherNetId(new java.math.BigInteger(netherNetId));
+        }
+        if (pmsgId != null) {
+            this.sessionInfo.setPmsgId(pmsgId);
+        }
 
         super.init();
 
