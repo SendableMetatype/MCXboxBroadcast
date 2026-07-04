@@ -3,7 +3,7 @@ package com.rtm516.mcxboxbroadcast.core;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
-import org.cloudburstmc.protocol.bedrock.codec.v975.Bedrock_v975;
+import org.cloudburstmc.protocol.bedrock.codec.v1001.Bedrock_v1001;
 
 import java.net.URI;
 import java.time.Duration;
@@ -47,7 +47,7 @@ public class Constants {
      */
     public static final int MAX_FRIENDS = 2000;
 
-    public static final BedrockCodec BEDROCK_CODEC = Bedrock_v975.CODEC;
+    public static final BedrockCodec BEDROCK_CODEC = Bedrock_v1001.CODEC;
 
     /**
      * Config version for upgrade purposes
